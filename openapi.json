@@ -1,0 +1,13 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Harvest Log",
+    "version": "1.0.0",
+    "description": ""
+  },
+  "paths": {},
+  "components": {
+    "schemas": {}
+  },
+  "servers": []
+}

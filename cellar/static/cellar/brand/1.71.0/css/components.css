@@ -1,0 +1,32 @@
+/* Alert Enterprise 1.71.0. Sign-in subset from css/components.css. */
+@font-face { font-family: 'Aeonik'; src: url('../assets/fonts/woff2/Aeonik-Regular.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Aeonik'; src: url('../assets/fonts/woff2/Aeonik-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+
+.ae-btn {
+  --_h: 40px; --_px: var(--ae-space-4); --_bg: var(--ae-action); --_fg: var(--ae-action-text);
+  --_bd: transparent; --_bg-h: var(--ae-action-hover); --_bg-p: var(--ae-action-press);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--ae-space-2);
+  height: var(--_h); padding: 0 var(--_px);
+  font: var(--ae-type-label); letter-spacing: 0.005em; white-space: nowrap; text-decoration: none;
+  color: var(--_fg); background: var(--_bg); border: 1px solid var(--_bd);
+  border-radius: var(--ae-radius-md); cursor: pointer; user-select: none;
+  transition: background-color var(--ae-duration-fast) var(--ae-ease-standard),
+              border-color var(--ae-duration-fast) var(--ae-ease-standard),
+              transform var(--ae-duration-fast) var(--ae-ease-standard),
+              box-shadow var(--ae-duration-fast) var(--ae-ease-standard);
+}
+.ae-btn:hover { background: var(--_bg-h); }
+.ae-btn:active { background: var(--_bg-p); transform: translateY(1px); }
+.ae-btn:focus-visible { outline: 2px solid var(--ae-line-focus); outline-offset: 2px; }
+.ae-btn:disabled, .ae-btn[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; transform: none; }
+.ae-btn:disabled:hover { background: var(--_bg); }
+
+.ae-field { display: grid; gap: var(--ae-space-2); }
+
+.ae-badge {
+  --_bg: var(--ae-bg-sunken); --_fg: var(--ae-text-2); --_dot: var(--ae-text-3);
+  display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 var(--ae-space-2);
+  font: 400 var(--ae-type-caption-size)/1 var(--ae-font-text); letter-spacing: 0.01em;
+  color: var(--_fg); background: var(--_bg); border-radius: var(--ae-radius-sm); white-space: nowrap;
+}
+.ae-badge--dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--_dot); }

@@ -1,0 +1,10 @@
+{% extends "cellar/base.html" %}
+{% block title %}{{ heading }} · Harvest Log{% endblock %}
+{% block content %}
+  <h1>{{ heading }}</h1>
+  <p>{{ user.get_username }} <span class="ae-badge">{{ user.get_role_display }}</span></p>
+  <form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button class="ae-btn" type="submit">Sign out</button>
+  </form>
+{% endblock %}

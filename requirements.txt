@@ -1,0 +1,42 @@
+# Harvest Log | CPython 3.13.18 | macOS and glibc Linux (arm64 and x86_64)
+# Published wheels only. Each SHA-256 identifies an allowed file on PyPI.
+--require-hashes
+--only-binary=:all:
+
+# Runtime
+Django==5.2.19 \
+    --hash=sha256:5965d974a5218a2b68a11dd1276434707f23886525c23f0598eccedaf4f4ca00
+django-ninja==1.8.0 \
+    --hash=sha256:132f37a36ac5ec9569fdc141da6984c1806bdd08af36f855980fab6cdcb10038
+psycopg[binary]==3.3.9 \
+    --hash=sha256:d2d7d04a1ce6dab4f5b27316bea3b52585cafa2f2d631e5b09dd69823f5c26f6
+dj-database-url==3.1.2 \
+    --hash=sha256:544e015fee3efa5127a1eb1cca465f4ace578265b3671fe61d0ed7dbafb5ec8a
+gunicorn==27.0.1 \
+    --hash=sha256:378b26b9a38adcf4592f28828233c1716acc55e833ea06bf48719782efaa0d10
+whitenoise==6.12.0 \
+    --hash=sha256:fc5e8c572e33ebf24795b47b6a7da8da3c00cff2349f5b04c02f28d0cc5a3cc2
+
+# Runtime dependencies
+annotated-types==0.8.0 \
+    --hash=sha256:f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
+asgiref==3.13.0 \
+    --hash=sha256:f9596a2434512686473d50f96ff6207fbba49ae1a785dfac614df4aeb085674d
+psycopg-binary==3.3.9 \
+    --hash=sha256:b98ecad106cd48998517e03aaee56f9d88f8857e043b8e3dbc2aa7facd475db6 \
+    --hash=sha256:e835af41e74176041d2290b167af92b74793b916ca3413598c39b535dd3674a5 \
+    --hash=sha256:366e2021a785afed9154f83f64793f662348a9ef244fef9779175c0906e8aacc \
+    --hash=sha256:180e4a99904d7a77f826fbb6dd16834bb3313675d8a6f055e39742fda00c33dc
+pydantic==2.14.4 \
+    --hash=sha256:653a2ad9f6d8858529c77c72717d0ea991d6c6837fe683246b2f4b2bbfc3fadc
+pydantic-core==2.50.5 \
+    --hash=sha256:e5d5d77a9446f44688a5ef420d92c9facac0865ef5565215db54be184ab7906f \
+    --hash=sha256:639a51931869c0594d8723b2f529c547db1aa33dc9571d001dc205d896170c08 \
+    --hash=sha256:8bbe282e79dc71b24ba7be284eacf27c8ddff8f26911e2030a0dd123c6aed326 \
+    --hash=sha256:cbfde3ad127786f1dea1a6cd89a5eb824a16203f24743ad2b4e07506f43bc844
+sqlparse==0.6.1 \
+    --hash=sha256:3be5a72d04c873d690d7c6dedd33d6fae2ef82759881ceec02fc2efd0cba564f
+typing-extensions==4.16.0 \
+    --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8
+typing-inspection==0.4.5 \
+    --hash=sha256:bc210535442b39e1bf2805e0c7a17dfd6a4ace760c84c7f7d16245d23a6b1c39

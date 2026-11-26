@@ -1,0 +1,21 @@
+{% load static %}
+<!doctype html>
+<html lang="en-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Harvest Log{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'cellar/brand/1.71.0/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'cellar/brand/1.71.0/css/components.css' %}">
+  <link rel="stylesheet" href="{% static 'cellar/site.css' %}">
+</head>
+<body>
+  <main>
+    <header>
+      <img src="{% static 'cellar/brand/1.71.0/logo.svg' %}" alt="Alert Enterprise" width="156">
+      <p>Harvest Log</p>
+    </header>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

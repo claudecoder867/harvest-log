@@ -1,0 +1,32 @@
+{% extends "cellar/base.html" %}
+{% block title %}Sign in · Harvest Log{% endblock %}
+{% block content %}
+  <h1>Sign in</h1>
+  <form method="post" action="{% url 'login' %}">
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    {% if form.errors %}
+      <section role="alert" aria-label="Sign-in errors" tabindex="-1" autofocus>
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+        {% for field in form %}
+          {% for error in field.errors %}
+            <p><a href="#{{ field.id_for_label }}">{{ field.label }} — {{ error }}</a></p>
+          {% endfor %}
+        {% endfor %}
+      </section>
+    {% endif %}
+    <div class="ae-field">
+      <label for="id_username">Username</label>
+      <input id="id_username" name="username" type="text" autocomplete="username"
+             autocapitalize="none" spellcheck="false" required
+             maxlength="{{ form.username.field.max_length }}" value="{{ form.username.value|default_if_none:'' }}"
+             {% if form.username.errors %}aria-invalid="true"{% endif %}>
+    </div>
+    <div class="ae-field">
+      <label for="id_password">Password</label>
+      <input id="id_password" name="password" type="password" autocomplete="current-password"
+             required {% if form.password.errors %}aria-invalid="true"{% endif %}>
+    </div>
+    <button class="ae-btn" type="submit">Sign in</button>
+  </form>
+{% endblock %}
