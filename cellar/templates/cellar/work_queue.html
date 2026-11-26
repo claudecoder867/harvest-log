@@ -1,0 +1,124 @@
+{% extends "cellar/base.html" %}
+{% block title %}Work queue · Harvest Log{% endblock %}
+{% block legacy_styles %}{% endblock %}
+{% block screen %}
+  {% comment %}
+    work_orders: permitted_orders(request.user), with active work first, then pk.
+    Load lot, vessel, assignee and version__procedure, and prefetch version__steps.
+    For managers supply lots (with season), vessels and active cellar assignees.
+  {% endcomment %}
+  {% if user.role == "manager" or user.role == "hand" %}
+    <h1>{% if user.role == "manager" %}Shift work queue{% else %}My work queue{% endif %}</h1>
+    {% if user.role == "manager" %}
+      <details>
+        <summary class="ae-btn">Issue work order</summary>
+        <form id="issue-form" method="post" action="{% url 'api-1.0.0:issue_work_order' %}">
+          {% csrf_token %}
+          <fieldset disabled>
+            <legend>New work order</legend>
+            <div class="ae-field">
+              <label for="issue-kind">Work type</label>
+              <select id="issue-kind" name="kind" required>
+                <option value="">Select a work type</option>
+                <option value="receive">Receive a load</option>
+                <option value="pump_over">Pump over</option>
+                <option value="sample">Take a lab sample</option>
+              </select>
+            </div>
+            <div class="ae-field">
+              <label for="issue-lot">Lot</label>
+              <select id="issue-lot" name="lot_id" required>
+                <option value="">Select a lot</option>
+                {% for lot in lots %}<option value="{{ lot.pk }}">{{ lot.code }} · {{ lot.season.year }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="ae-field">
+              <label for="issue-vessel">Tank (optional)</label>
+              <select id="issue-vessel" name="vessel_id">
+                <option value="">No tank</option>
+                {% for vessel in vessels %}<option value="{{ vessel.pk }}">{{ vessel.code }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="ae-field">
+              <label for="issue-assignee">Assignee</label>
+              <select id="issue-assignee" name="assignee_id" required>
+                <option value="">Select a cellar team member</option>
+                {% for person in assignees %}<option value="{{ person.pk }}">{{ person.get_full_name|default:person.get_username }}</option>{% endfor %}
+              </select>
+            </div>
+            <button type="submit" class="ae-btn">Issue work order</button>
+          </fieldset>
+          <noscript><p>Enable JavaScript to issue work orders.</p></noscript>
+          <p id="issue-error" role="alert" tabindex="-1" hidden></p>
+        </form>
+      </details>
+      <p><a href="{% url 'procedure_editor' %}">Procedure editor</a></p>
+    {% endif %}
+    <table class="ae-table">
+      <caption>{% if user.role == "manager" %}Shift orders{% else %}Orders assigned to you{% endif %}</caption>
+      <thead>
+        <tr><th scope="col">Order / type</th><th scope="col">Lot / tank</th><th scope="col">Assignee</th><th scope="col">Status</th></tr>
+      </thead>
+      <tbody>
+        {% for order in work_orders %}
+          <tr>
+            <td>
+              <details{% if user.role == "hand" and forloop.first and order.status != "completed" %} open{% endif %}>
+                <summary>#{{ order.pk }} · {{ order.version.procedure.get_kind_display }}</summary>
+                <p>{% for char in order.code %}{{ char }}{% if forloop.counter|divisibleby:8 %}<wbr>{% endif %}{% endfor %}</p>
+                <strong>Instructions <span class="ae-badge">Revision {{ order.version.revision }}</span></strong>
+                <ol>{% for step in order.version.steps.all %}<li>{{ step.instruction }}</li>{% endfor %}</ol>
+              </details>
+            </td>
+            <td>{{ order.lot.code }}{% if order.vessel_id %} · {{ order.vessel.code }}{% endif %}</td>
+            <td>{{ order.assignee.get_full_name|default:order.assignee.get_username }}</td>
+            <td><span class="ae-badge">{{ order.get_status_display }}</span></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">{% if user.role == "hand" %}You have no assigned work orders.{% else %}No work orders have been issued.{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  {% if user.role == "manager" %}
+    <script>
+      (() => {
+        const form = document.getElementById("issue-form");
+        const fields = form.querySelector("fieldset");
+        const error = document.getElementById("issue-error");
+        fields.disabled = false;
+        form.addEventListener("submit", async event => {
+          event.preventDefault();
+          if (fields.disabled) return;
+          const data = new FormData(form);
+          // Ninja also accepts integer strings for IDs beyond JavaScript's safe range.
+          function recordId(name) {
+            const value = data.get(name);
+            if (!value) return null;
+            const number = Number(value);
+            return Number.isSafeInteger(number) ? number : value;
+          }
+          const payload = {
+            kind: data.get("kind"),
+            lot_id: recordId("lot_id"),
+            vessel_id: recordId("vessel_id"),
+            assignee_id: recordId("assignee_id")
+          };
+          error.hidden = true;
+          fields.disabled = true;
+          try {
+            await postJSON(form.action, payload);
+            window.location.reload();
+          } catch (problem) {
+            fields.disabled = false;
+            error.textContent = problem.message;
+            error.hidden = false;
+            (form.elements.namedItem(problem.field) || error).focus();
+          }
+        });
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

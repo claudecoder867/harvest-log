@@ -1,0 +1,241 @@
+{% extends "cellar/base.html" %}
+{% block title %}Procedure editor · Harvest Log{% endblock %}
+{% block legacy_styles %}{% endblock %}
+{% block screen %}
+  {% comment %}
+    Manager-only view. Resolve the GET parameter kind to a WorkKind (default receive).
+    Supply kind and published_version, its newest published Version with steps prefetched.
+    Use None for a procedure that has never been published.
+  {% endcomment %}
+  {% if user.role == "manager" %}
+    <h1>Procedure editor</h1>
+    <p><a href="{% url 'manager' %}">Work queue</a></p>
+    <form method="get">
+      <div class="ae-field">
+        <label for="choose-kind">Procedure</label>
+        <select id="choose-kind" name="kind">
+          <option value="receive"{% if kind == "receive" %} selected{% endif %}>Receive a load</option>
+          <option value="pump_over"{% if kind == "pump_over" %} selected{% endif %}>Pump over</option>
+          <option value="sample"{% if kind == "sample" %} selected{% endif %}>Take a lab sample</option>
+        </select>
+      </div>
+      <button type="submit" class="ae-btn">Open procedure</button>
+    </form>
+
+    <section aria-labelledby="published-title">
+      <h2 id="published-title"><span id="loaded-kind">{% if kind == "sample" %}Take a lab sample{% elif kind == "pump_over" %}Pump over{% else %}Receive a load{% endif %}</span> · Published steps <span id="published-revision" class="ae-badge">{% if published_version %}Revision {{ published_version.revision }}{% else %}Unpublished{% endif %}</span></h2>
+      <ol id="published-steps"{% if not published_version %} hidden{% endif %}>
+        {% for step in published_version.steps.all %}<li>{{ step.instruction }}</li>{% endfor %}
+      </ol>
+    </section>
+
+    <form id="editor" method="post" action="{% url 'api-1.0.0:publish_version' kind=kind|default:'receive' %}" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="base_revision" value="{{ published_version.revision|default:'0' }}">
+      <section id="error-summary" role="alert" aria-labelledby="error-title" tabindex="-1" hidden>
+        <h2 id="error-title">Could not publish this procedure</h2>
+        <ul></ul>
+        <p id="conflict-help" hidden><a href="?kind={{ kind|default:'receive'|urlencode }}" target="_blank" rel="noopener">Open the current revision in a new tab</a> to compare it with this draft.</p>
+      </section>
+      <fieldset id="draft" disabled>
+        <legend>Draft steps <span id="draft-base" class="ae-badge">{% if published_version %}Based on revision {{ published_version.revision }}{% else %}First revision{% endif %}</span></legend>
+        <p>Enter up to 12 steps, with up to 240 characters per instruction.</p>
+        <ol id="draft-steps"></ol>
+        <button id="add-step" class="ae-btn" type="button">Add step</button>
+        <button id="publish" class="ae-btn" type="submit">Publish revision</button>
+      </fieldset>
+    </form>
+    <noscript><p>Enable JavaScript to edit and publish procedure steps.</p></noscript>
+    <p id="publish-status" role="status"></p>
+
+    <template id="step-row">
+      <li>
+        <div class="ae-field">
+          <label></label>
+          <textarea name="step" rows="2" required></textarea>
+          <span data-error hidden></span>
+        </div>
+        <button type="button" class="ae-btn" data-action="up">Move up</button>
+        <button type="button" class="ae-btn" data-action="down">Move down</button>
+        <button type="button" class="ae-btn" data-action="remove">Remove</button>
+      </li>
+    </template>
+    <dialog id="confirmation" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+      <h2 id="confirm-title">Publish this revision?</h2>
+      <p id="confirm-description">New work orders will use these steps. Existing work orders keep their assigned version.</p>
+      <form method="dialog">
+        <button type="submit" class="ae-btn" value="cancel" autofocus>Keep editing</button>
+        <button type="submit" class="ae-btn" value="publish">Confirm publication</button>
+      </form>
+    </dialog>
+  {% else %}
+    <h1>Manager access required</h1>
+  {% endif %}
+{% endblock %}
+{% block scripts %}
+  {% if user.role == "manager" %}
+    <script>
+      (() => {
+        const byId = id => document.getElementById(id);
+        const form = byId("editor");
+        const draft = byId("draft");
+        const list = byId("draft-steps");
+        const published = byId("published-steps");
+        const summary = byId("error-summary");
+        const errors = summary.querySelector("ul");
+        const dialog = byId("confirmation");
+        const add = byId("add-step");
+        const publish = byId("publish");
+        const status = byId("publish-status");
+        const baseRevision = form.elements.base_revision;
+        const maxSteps = 12;
+        const instructionLimit = 240;
+
+        function appendStep(value) {
+          const row = byId("step-row").content.firstElementChild.cloneNode(true);
+          row.querySelector("textarea").value = value;
+          list.append(row);
+          return row;
+        }
+
+        function numberSteps() {
+          Array.from(list.children).forEach((row, index) => {
+            const label = `Step ${index + 1}`;
+            const id = `step-${index + 1}`;
+            const input = row.querySelector("textarea");
+            row.querySelector("label").textContent = label;
+            row.querySelector("label").htmlFor = id;
+            input.id = id;
+            input.setAttribute("aria-describedby", id + "-error");
+            row.querySelector("[data-error]").id = id + "-error";
+            for (const button of row.querySelectorAll("button")) {
+              const action = button.dataset.action;
+              const name = action === "remove" ? `Remove step ${index + 1}` : `Move step ${index + 1} ${action}`;
+              button.setAttribute("aria-label", name);
+            }
+            row.querySelector('[data-action="up"]').disabled = index === 0;
+            row.querySelector('[data-action="down"]').disabled = index === list.children.length - 1;
+            row.querySelector('[data-action="remove"]').disabled = list.children.length === 1;
+          });
+          add.disabled = list.children.length >= maxSteps;
+        }
+
+        function clearErrors() {
+          errors.replaceChildren();
+          summary.hidden = true;
+          for (const input of list.querySelectorAll('[aria-invalid="true"]')) {
+            input.removeAttribute("aria-invalid");
+            byId(input.id + "-error").hidden = true;
+          }
+        }
+
+        function showError(message, input) {
+          const item = document.createElement("li");
+          if (input) {
+            const inline = byId(input.id + "-error");
+            inline.textContent = message;
+            inline.hidden = false;
+            input.setAttribute("aria-invalid", "true");
+            const link = document.createElement("a");
+            link.href = "#" + input.id;
+            link.textContent = message;
+            item.append(link);
+          } else {
+            item.textContent = message;
+          }
+          errors.append(item);
+          summary.hidden = false;
+        }
+
+        for (const step of published.children) appendStep(step.textContent);
+        if (!list.children.length) appendStep("");
+        numberSteps();
+        draft.disabled = false;
+
+        add.addEventListener("click", () => {
+          if (!publish.disabled) clearErrors();
+          const row = appendStep("");
+          numberSteps();
+          row.querySelector("textarea").focus();
+        });
+        list.addEventListener("click", event => {
+          const action = event.target.closest("button")?.dataset.action;
+          if (!action) return;
+          if (!publish.disabled) clearErrors();
+          const row = event.target.closest("li");
+          let focusRow = row;
+          if (action === "up") list.insertBefore(row, row.previousElementSibling);
+          if (action === "down") list.insertBefore(row.nextElementSibling, row);
+          if (action === "remove") {
+            focusRow = row.nextElementSibling || row.previousElementSibling;
+            row.remove();
+          }
+          numberSteps();
+          focusRow.querySelector("textarea").focus();
+        });
+
+        form.addEventListener("submit", event => {
+          event.preventDefault();
+          if (draft.disabled || publish.disabled) return;
+          clearErrors();
+          status.textContent = "";
+          const inputs = list.querySelectorAll("textarea");
+          inputs.forEach((input, index) => {
+            const value = input.value.trim();
+            if (!value) showError(`Step ${index + 1} is empty. Add an instruction or remove the step.`, input);
+            else if (Array.from(value).length > instructionLimit) showError(`Shorten step ${index + 1} to 240 characters.`, input);
+          });
+          const firstError = list.querySelector('[aria-invalid="true"]');
+          if (firstError) {
+            firstError.focus();
+            return;
+          }
+          byId("confirm-title").textContent = `Publish revision ${Number(baseRevision.value) + 1} for “${byId("loaded-kind").textContent}”?`;
+          dialog.returnValue = "";
+          dialog.showModal();
+        });
+
+        dialog.addEventListener("close", async () => {
+          if (dialog.returnValue !== "publish" || draft.disabled || publish.disabled) return;
+          const steps = Array.from(list.querySelectorAll("textarea"), input => input.value.trim());
+          draft.disabled = true;
+          status.textContent = "Publishing…";
+          try {
+            const version = await postJSON(form.action, {
+              base_revision: Number(baseRevision.value),
+              steps
+            });
+            baseRevision.value = version.revision;
+            byId("published-revision").textContent = `Revision ${version.revision}`;
+            byId("draft-base").textContent = `Based on revision ${version.revision}`;
+            published.replaceChildren();
+            list.replaceChildren();
+            for (const step of version.steps) {
+              const item = document.createElement("li");
+              item.textContent = step.instruction;
+              published.append(item);
+              appendStep(step.instruction);
+            }
+            published.hidden = false;
+            numberSteps();
+            status.textContent = `Version ${version.revision} published. Existing work orders keep their assigned version.`;
+          } catch (problem) {
+            status.textContent = "";
+            const match = /^steps\.(\d+)$/.exec(problem.field || "");
+            const input = match ? list.children[Number(match[1])]?.querySelector("textarea") : null;
+            showError(input ? `Step ${Number(match[1]) + 1}: ${problem.message}` : problem.message, input);
+            if (problem.status === 409) {
+              byId("conflict-help").hidden = false;
+              publish.disabled = true;
+            }
+            draft.disabled = false;
+            (input || summary).focus();
+            return;
+          }
+          draft.disabled = false;
+          publish.focus();
+        });
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

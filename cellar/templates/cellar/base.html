@@ -7,15 +7,62 @@
   <title>{% block title %}Harvest Log{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'cellar/brand/1.71.0/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'cellar/brand/1.71.0/css/components.css' %}">
-  <link rel="stylesheet" href="{% static 'cellar/site.css' %}">
+  {% block legacy_styles %}<link rel="stylesheet" href="{% static 'cellar/site.css' %}">{% endblock %}
 </head>
 <body>
-  <main>
+  <main id="main">
     <header>
       <img src="{% static 'cellar/brand/1.71.0/logo.svg' %}" alt="Alert Enterprise" width="156">
       <p>Harvest Log</p>
     </header>
-    {% block content %}{% endblock %}
+    {% block content %}
+      {% if user.is_authenticated %}
+        <p>{{ user.get_username }} <span class="ae-badge">{{ user.get_role_display }}</span></p>
+        {% block screen %}{% endblock %}
+        <form action="{% url 'logout' %}" method="post">
+          {% csrf_token %}
+          <button type="submit" class="ae-btn">Sign out</button>
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}">Sign in to Harvest Log</a>
+      {% endif %}
+    {% endblock %}
   </main>
+  {% if user.is_authenticated %}
+    <script>
+      async function postJSON(url, payload) {
+        const cookie = document.cookie.split(";").map(part => part.trim())
+          .find(part => part.startsWith("csrftoken="));
+        if (!cookie || cookie === "csrftoken=") {
+          throw new Error("Refresh this page to renew your session before submitting.");
+        }
+
+        const response = await fetch(url, {
+          method: "POST",
+          mode: "same-origin",
+          credentials: "same-origin",
+          redirect: "error",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "X-CSRFToken": decodeURIComponent(cookie.slice("csrftoken=".length))
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          const error = new Error(data?.message || `The request failed (HTTP ${response.status}).`);
+          error.field = data?.field;
+          error.status = response.status;
+          throw error;
+        }
+        if (data === null) {
+          throw new Error("The response could not be read. Check the record before trying again.");
+        }
+        return data;
+      }
+    </script>
+    {% block scripts %}{% endblock %}
+  {% endif %}
 </body>
 </html>
