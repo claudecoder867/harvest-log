@@ -14,6 +14,7 @@ from . import services
 from .models import (
     MAX_INSTRUCTION_LENGTH, MAX_STEPS, AuditEvent, LabReading, Version, WorkKind, WorkOrder,
 )
+from .reports import season_totals
 
 class DecimalJSONParser(Parser):
     def parse_body(self, request):
@@ -227,3 +228,40 @@ def publish_version(request, kind: WorkKind, payload: PublishIn):
     """Managers publish ordered steps against a base revision. Use zero for the first revision."""
     version = services.publish_version_for_kind(request.user, kind, payload.base_revision, payload.steps)
     return Status(201, version)
+
+
+class WorkKindCounts(Schema):
+    kind: WorkKind
+    label: str
+    not_started: int
+    in_progress: int
+    completed: int
+    total: int
+
+
+class SeasonReportOut(Schema):
+    year: int
+    total_orders: int
+    not_started_orders: int
+    in_progress_orders: int
+    completed_orders: int
+    lab_readings: int
+    net_tonnes_received: Decimal
+    by_kind: list[WorkKindCounts]
+
+
+class AuditEventOut(EventOut):
+    work_order_id: int | None
+    version_id: int | None
+
+
+@api.get("/reports/seasons/{year}", auth=manager_session, response=responses(200, SeasonReportOut, 422))
+def get_season_report(request, year: Annotated[int, Field(ge=1, le=9999)]):
+    """Managers can reconcile orders, completed receipts and lab readings for a harvest year."""
+    return season_totals(year)
+
+
+@api.get("/audit-events", auth=manager_session, response=responses(200, list[AuditEventOut]))
+def list_audit_events(request):
+    """Managers can read winery-wide events and their target IDs, newest first."""
+    return AuditEvent.objects.order_by("-occurred_at", "-pk")

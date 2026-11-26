@@ -53,6 +53,7 @@
         </form>
       </details>
       <p><a href="{% url 'procedure_editor' %}">Procedure editor</a></p>
+      <p><a href="{% url 'season_report_latest' %}">Season report</a></p>
     {% endif %}
     <table class="ae-table">
       <caption>{% if user.role == "manager" %}Shift orders{% else %}Orders assigned to you{% endif %}</caption>

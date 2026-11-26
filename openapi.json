@@ -560,6 +560,122 @@
           }
         ]
       }
+    },
+    "/api/v1/reports/seasons/{year}": {
+      "get": {
+        "operationId": "cellar_api_get_season_report",
+        "summary": "Get Season Report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "year",
+            "schema": {
+              "maximum": 9999,
+              "minimum": 1,
+              "title": "Year",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonReportOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Managers can reconcile orders, completed receipts and lab readings for a harvest year.",
+        "security": [
+          {
+            "ManagerSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/audit-events": {
+      "get": {
+        "operationId": "cellar_api_list_audit_events",
+        "summary": "List Audit Events",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEventOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Managers can read winery-wide events and their target IDs, newest first.",
+        "security": [
+          {
+            "ManagerSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1073,6 +1189,164 @@
           "steps"
         ],
         "title": "PublishIn",
+        "type": "object"
+      },
+      "SeasonReportOut": {
+        "properties": {
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          },
+          "total_orders": {
+            "title": "Total Orders",
+            "type": "integer"
+          },
+          "not_started_orders": {
+            "title": "Not Started Orders",
+            "type": "integer"
+          },
+          "in_progress_orders": {
+            "title": "In Progress Orders",
+            "type": "integer"
+          },
+          "completed_orders": {
+            "title": "Completed Orders",
+            "type": "integer"
+          },
+          "lab_readings": {
+            "title": "Lab Readings",
+            "type": "integer"
+          },
+          "net_tonnes_received": {
+            "title": "Net Tonnes Received",
+            "type": "string"
+          },
+          "by_kind": {
+            "items": {
+              "$ref": "#/components/schemas/WorkKindCounts"
+            },
+            "title": "By Kind",
+            "type": "array"
+          }
+        },
+        "required": [
+          "year",
+          "total_orders",
+          "not_started_orders",
+          "in_progress_orders",
+          "completed_orders",
+          "lab_readings",
+          "net_tonnes_received",
+          "by_kind"
+        ],
+        "title": "SeasonReportOut",
+        "type": "object"
+      },
+      "WorkKindCounts": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/WorkKind"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "not_started": {
+            "title": "Not Started",
+            "type": "integer"
+          },
+          "in_progress": {
+            "title": "In Progress",
+            "type": "integer"
+          },
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "not_started",
+          "in_progress",
+          "completed",
+          "total"
+        ],
+        "title": "WorkKindCounts",
+        "type": "object"
+      },
+      "AuditEventOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "action": {
+            "$ref": "#/components/schemas/Action"
+          },
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "integer"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "changes": {
+            "additionalProperties": true,
+            "title": "Changes",
+            "type": "object"
+          },
+          "lab_reading_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Reading Id"
+          },
+          "work_order_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Order Id"
+          },
+          "version_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Id"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "actor_id",
+          "occurred_at",
+          "changes",
+          "lab_reading_id",
+          "work_order_id",
+          "version_id"
+        ],
+        "title": "AuditEventOut",
         "type": "object"
       }
     },

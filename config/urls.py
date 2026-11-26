@@ -10,5 +10,7 @@ urlpatterns = [
     path("accounts/logout/", LogoutView.as_view(), name="logout"),
     path("manager/", views.manager, name="manager"),
     path("manager/procedures/", views.procedure_editor, name="procedure_editor"),
+    path("manager/reports/seasons/", views.season_report, name="season_report_latest"),
+    path("manager/reports/seasons/<int:year>/", views.season_report, name="season_report"),
     path("api/v1/", api.urls),
 ]

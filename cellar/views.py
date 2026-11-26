@@ -4,9 +4,11 @@ from django.core.exceptions import PermissionDenied
 from django.db.models import Case, When
 from django.http import Http404
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_safe
 
-from .models import CellarRole, Lot, User, Version, Vessel, WorkKind, WorkOrder
+from .models import CellarRole, Lot, Season, User, Version, Vessel, WorkKind, WorkOrder
+from .reports import season_totals
 from .services import permitted_orders
 
 
@@ -69,3 +71,16 @@ def procedure_editor(request):
     return render(request, "cellar/procedure_editor.html", {
         "kind": kind, "published_version": published_version,
     })
+
+
+@login_required
+@require_safe
+def season_report(request, year=None):
+    if request.user.role != CellarRole.CellarManager:
+        raise PermissionDenied
+    years = list(Season.objects.order_by("-year").values_list("year", flat=True))
+    if year is None:
+        year = years[0] if years else timezone.localdate().year
+    if not 1 <= year <= 9999:
+        raise Http404("Invalid season year.")
+    return render(request, "cellar/season_report.html", {"report": season_totals(year), "years": years})
