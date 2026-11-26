@@ -1,11 +1,8 @@
 from django.contrib.auth.views import LogoutView
 from django.urls import path
-from ninja import NinjaAPI
-from ninja.security import django_auth
 
 from cellar import views
-
-api = NinjaAPI(title="Harvest Log", version="1.0.0", auth=django_auth)
+from cellar.api import api
 
 urlpatterns = [
     path("", views.home, name="home"),

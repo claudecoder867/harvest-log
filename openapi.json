@@ -3,11 +3,1091 @@
   "info": {
     "title": "Harvest Log",
     "version": "1.0.0",
-    "description": ""
+    "description": "Sign in with a Django session. On POST, send the csrftoken cookie value in the X-CSRFToken header."
   },
-  "paths": {},
+  "paths": {
+    "/api/v1/work-orders": {
+      "get": {
+        "operationId": "cellar_api_list_work_orders",
+        "summary": "List Work Orders",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrderOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Managers see every order. Cellar hands see orders assigned to them.",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "cellar_api_issue_work_order",
+        "summary": "Issue Work Order",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Managers issue an order under the current published revision of its kind.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "ManagerSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/work-orders/{id}": {
+      "get": {
+        "operationId": "cellar_api_get_work_order",
+        "summary": "Get Work Order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "exclusiveMinimum": 0,
+              "maximum": 9223372036854775807,
+              "title": "Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Open a permitted order with its pinned instructions, measurements and timeline.",
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/work-orders/{id}/transitions": {
+      "post": {
+        "operationId": "cellar_api_transition_work_order",
+        "summary": "Transition Work Order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "exclusiveMinimum": 0,
+              "maximum": 9223372036854775807,
+              "title": "Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Managers or the assignee can start or complete work. Supply kg or minutes on completion.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransitionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/work-orders/{id}/lab-results": {
+      "post": {
+        "operationId": "cellar_api_record_lab_result",
+        "summary": "Record Lab Result",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "exclusiveMinimum": 0,
+              "maximum": 9223372036854775807,
+              "title": "Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Managers or the assignee can record a result on an in-progress sample.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "SessionAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/procedures/{kind}/versions": {
+      "get": {
+        "operationId": "cellar_api_list_versions",
+        "summary": "List Versions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "schema": {
+              "enum": [
+                "receive",
+                "pump_over",
+                "sample"
+              ],
+              "title": "WorkKind",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VersionOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Managers can read published versions of this procedure, newest first.",
+        "security": [
+          {
+            "ManagerSession": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "cellar_api_publish_version",
+        "summary": "Publish Version",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "schema": {
+              "enum": [
+                "receive",
+                "pump_over",
+                "sample"
+              ],
+              "title": "WorkKind",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Managers publish ordered steps against a base revision. Use zero for the first revision.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "ManagerSession": []
+          }
+        ]
+      }
+    }
+  },
   "components": {
-    "schemas": {}
+    "schemas": {
+      "OrderOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/WorkKind"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "integer"
+          },
+          "vessel_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vessel Id"
+          },
+          "assignee_id": {
+            "title": "Assignee Id",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "version_id": {
+            "title": "Version Id",
+            "type": "integer"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "kind",
+          "lot_id",
+          "vessel_id",
+          "assignee_id",
+          "status",
+          "version_id",
+          "revision"
+        ],
+        "title": "OrderOut",
+        "type": "object"
+      },
+      "OrderStatus": {
+        "enum": [
+          "not_started",
+          "in_progress",
+          "completed"
+        ],
+        "title": "OrderStatus",
+        "type": "string"
+      },
+      "WorkKind": {
+        "enum": [
+          "receive",
+          "pump_over",
+          "sample"
+        ],
+        "title": "WorkKind",
+        "type": "string"
+      },
+      "ErrorOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorOut",
+        "type": "object"
+      },
+      "IssueIn": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/WorkKind"
+          },
+          "lot_id": {
+            "exclusiveMinimum": 0,
+            "maximum": 9223372036854775807,
+            "title": "Lot Id",
+            "type": "integer"
+          },
+          "assignee_id": {
+            "exclusiveMinimum": 0,
+            "maximum": 9223372036854775807,
+            "title": "Assignee Id",
+            "type": "integer"
+          },
+          "vessel_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "maximum": 9223372036854775807,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vessel Id"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          }
+        },
+        "required": [
+          "kind",
+          "lot_id",
+          "assignee_id"
+        ],
+        "title": "IssueIn",
+        "type": "object"
+      },
+      "Action": {
+        "enum": [
+          "version_published",
+          "work_order_issued",
+          "work_order_started",
+          "work_order_completed",
+          "lab_reading_recorded"
+        ],
+        "title": "Action",
+        "type": "string"
+      },
+      "EventOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "action": {
+            "$ref": "#/components/schemas/Action"
+          },
+          "actor_id": {
+            "title": "Actor Id",
+            "type": "integer"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "changes": {
+            "additionalProperties": true,
+            "title": "Changes",
+            "type": "object"
+          },
+          "lab_reading_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lab Reading Id"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "actor_id",
+          "occurred_at",
+          "changes",
+          "lab_reading_id"
+        ],
+        "title": "EventOut",
+        "type": "object"
+      },
+      "LabOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "recorded_by": {
+            "title": "Recorded By",
+            "type": "integer"
+          },
+          "recorded_at": {
+            "format": "date-time",
+            "title": "Recorded At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "analyte",
+          "value",
+          "unit",
+          "recorded_by",
+          "recorded_at"
+        ],
+        "title": "LabOut",
+        "type": "object"
+      },
+      "OrderDetail": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/WorkKind"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "integer"
+          },
+          "vessel_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vessel Id"
+          },
+          "assignee_id": {
+            "title": "Assignee Id",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "version_id": {
+            "title": "Version Id",
+            "type": "integer"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "version": {
+            "$ref": "#/components/schemas/VersionOut"
+          },
+          "net_kg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Kg"
+          },
+          "elapsed_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Minutes"
+          },
+          "lab_readings": {
+            "items": {
+              "$ref": "#/components/schemas/LabOut"
+            },
+            "title": "Lab Readings",
+            "type": "array"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/EventOut"
+            },
+            "title": "Timeline",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "kind",
+          "lot_id",
+          "vessel_id",
+          "assignee_id",
+          "status",
+          "version_id",
+          "revision",
+          "version",
+          "lab_readings",
+          "timeline"
+        ],
+        "title": "OrderDetail",
+        "type": "object"
+      },
+      "StepOut": {
+        "properties": {
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "instruction": {
+            "title": "Instruction",
+            "type": "string"
+          }
+        },
+        "required": [
+          "position",
+          "instruction"
+        ],
+        "title": "StepOut",
+        "type": "object"
+      },
+      "VersionOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "published_by": {
+            "title": "Published By",
+            "type": "integer"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepOut"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "published_by",
+          "published_at",
+          "steps"
+        ],
+        "title": "VersionOut",
+        "type": "object"
+      },
+      "TransitionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "start",
+              "complete"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "net_kg": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Kg"
+          },
+          "elapsed_minutes": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "maximum": 2147483647,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Minutes"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "TransitionIn",
+        "type": "object"
+      },
+      "LabIn": {
+        "additionalProperties": false,
+        "properties": {
+          "analyte": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Analyte",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "analyte",
+          "value"
+        ],
+        "title": "LabIn",
+        "type": "object"
+      },
+      "PublishIn": {
+        "additionalProperties": false,
+        "properties": {
+          "base_revision": {
+            "minimum": 0,
+            "title": "Base Revision",
+            "type": "integer"
+          },
+          "steps": {
+            "items": {
+              "maxLength": 240,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base_revision",
+          "steps"
+        ],
+        "title": "PublishIn",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "SessionAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      },
+      "ManagerSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      }
+    }
   },
   "servers": []
 }

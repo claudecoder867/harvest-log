@@ -1,23 +1,44 @@
+from uuid import uuid4
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from ninja.errors import HttpError
 
 from .models import (
     MAX_INSTRUCTION_LENGTH, MAX_STEPS, Analyte, AuditEvent, CellarRole, LabReading,
-    Procedure, PumpOver, Receipt, Step, Version, WorkKind, WorkOrder,
+    Lot, Procedure, PumpOver, Receipt, Step, User, Version, Vessel, WorkKind, WorkOrder,
 )
+
+
+class InputError(HttpError):
+    def __init__(self, field, message):
+        super().__init__(422, message)
+        self.field = field
+
+
+def require_cellar_user(user):
+    if user is None or not user.is_authenticated:
+        raise HttpError(401, "Sign in to access Harvest Log.")
+    if not user.is_active or user.role not in CellarRole.values:
+        raise HttpError(403, "An active cellar role is required.")
+
+
+def require_manager(user):
+    require_cellar_user(user)
+    if user.role != CellarRole.CellarManager:
+        raise HttpError(403, "Only a cellar manager can perform this action.")
 
 
 def _clean_steps(new_steps):
     if not isinstance(new_steps, (list, tuple)) or not 1 <= len(new_steps) <= MAX_STEPS:
-        raise HttpError(422, f"Provide between 1 and {MAX_STEPS} ordered steps.")
+        raise InputError("steps", f"Provide between 1 and {MAX_STEPS} ordered steps.")
 
     instructions = []
     for position, value in enumerate(new_steps, 1):
         instruction = value.strip() if isinstance(value, str) else ""
         if not 1 <= len(instruction) <= MAX_INSTRUCTION_LENGTH or "\x00" in instruction:
-            raise HttpError(
-                422, f"Step {position} must contain 1–{MAX_INSTRUCTION_LENGTH} characters of text.",
+            raise InputError(
+                f"steps.{position - 1}", f"Step {position} must contain 1–{MAX_INSTRUCTION_LENGTH} characters of text.",
             )
         instructions.append(instruction)
     return instructions
@@ -25,12 +46,9 @@ def _clean_steps(new_steps):
 
 def publish_procedure_version(manager_user, procedure_id, base_revision, new_steps):
     """Publish a complete snapshot. Use base_revision=0 for a procedure's first publication."""
-    if manager_user is None or not manager_user.is_authenticated:
-        raise HttpError(401, "Sign in to publish a procedure.")
-    if not manager_user.is_active or manager_user.role != CellarRole.CellarManager:
-        raise HttpError(403, "Only a cellar manager can publish a procedure.")
+    require_manager(manager_user)
     if type(base_revision) is not int or base_revision < 0:
-        raise HttpError(422, "Base revision must be a non-negative integer.")
+        raise InputError("base_revision", "Base revision must be a non-negative integer.")
 
     with transaction.atomic():
         try:
@@ -57,40 +75,126 @@ def publish_procedure_version(manager_user, procedure_id, base_revision, new_ste
     return version
 
 
-def _lock_in_progress_order(user, work_order_id):
-    if user is None or not user.is_authenticated:
-        raise HttpError(401, "Sign in to update a work order.")
-    if not user.is_active or user.role not in CellarRole.values:
-        raise HttpError(403, "You do not have permission to update work orders.")
+def publish_version_for_kind(user, kind, base_revision, steps):
+    require_manager(user)
+    with transaction.atomic():
+        procedure, _ = Procedure.objects.get_or_create(kind=kind)
+        return publish_procedure_version(user, procedure.pk, base_revision, steps)
 
-    orders = WorkOrder.objects.select_related("version__procedure").select_for_update(of=("self",))
+
+def permitted_orders(user):
+    require_cellar_user(user)
+    orders = WorkOrder.objects.select_related("version__procedure")
     if user.role == CellarRole.CellarHand:
         orders = orders.filter(assignee=user)
+    return orders
+
+
+def issue_work_order(user, *, kind, lot_id, assignee_id, vessel_id=None, code=None):
+    require_manager(user)
+    with transaction.atomic():
+        procedure = Procedure.objects.select_for_update().filter(kind=kind).first()
+        version = Version.objects.filter(
+            procedure=procedure, publication__isnull=False,
+        ).order_by("-revision").first()
+        if version is None:
+            raise HttpError(409, "Publish a procedure version before issuing this work.")
+        if not Lot.objects.select_for_update(no_key=True).filter(pk=lot_id).exists():
+            raise InputError("lot_id", "Select an existing lot.")
+        if vessel_id is not None and not Vessel.objects.select_for_update(no_key=True).filter(pk=vessel_id).exists():
+            raise InputError("vessel_id", "Select an existing vessel.")
+        assignees = User.objects.select_for_update(no_key=True).filter(is_active=True, role__in=CellarRole.values)
+        if not assignees.filter(pk=assignee_id).exists():
+            raise InputError("assignee_id", "Select an active cellar user.")
+
+        order, created = WorkOrder.objects.get_or_create(
+            code=code if code is not None else f"HL-{uuid4().hex}",
+            defaults=dict(lot_id=lot_id, vessel_id=vessel_id, assignee_id=assignee_id, version=version),
+        )
+        if not created:
+            raise HttpError(409, "This work order code is already in use.")
+        AuditEvent.objects.create(
+            actor=user, action=AuditEvent.Action.ISSUED, work_order=order,
+            changes={"version_id": version.pk, "lot_id": lot_id, "vessel_id": vessel_id,
+                     "assignee_id": assignee_id, "status": order.status},
+        )
+    return order
+
+
+def _lock_order(user, work_order_id):
+    orders = permitted_orders(user).select_for_update(of=("self",))
     try:
         order = orders.get(pk=work_order_id)
     except WorkOrder.DoesNotExist as exc:
         raise HttpError(404, "Work order not found.") from exc
+    return order
+
+
+def start_work_order(user, work_order_id):
+    with transaction.atomic():
+        order = _lock_order(user, work_order_id)
+        if order.status != WorkOrder.Status.NOT_STARTED:
+            raise HttpError(409, "Only a work order that has not started can be started.")
+        order.status = WorkOrder.Status.IN_PROGRESS
+        order.save(update_fields=["status"])
+        AuditEvent.objects.create(
+            actor=user, action=AuditEvent.Action.STARTED, work_order=order,
+            changes={"status": {"from": WorkOrder.Status.NOT_STARTED, "to": order.status}},
+        )
+    return order
+
+
+def _lock_in_progress_order(user, work_order_id):
+    order = _lock_order(user, work_order_id)
     if order.status != WorkOrder.Status.IN_PROGRESS:
         raise HttpError(409, "This operation requires an in-progress work order.")
     return order
 
 
-def complete_work_order(user, work_order_id):
+def _completion_measurement(order, net_kg, elapsed_minutes):
+    if net_kg is not None and order.kind != WorkKind.RECEIVE:
+        raise InputError("net_kg", "Net kg can only be recorded on a receiving order.")
+    if elapsed_minutes is not None and order.kind != WorkKind.PUMP_OVER:
+        raise InputError("elapsed_minutes", "Elapsed minutes require a pump-over order.")
+
+    if order.kind == WorkKind.SAMPLE:
+        if not order.lab_readings.exists():
+            raise HttpError(409, "Record a lab reading before completing this sample order.")
+        return {}
+
+    if order.kind == WorkKind.RECEIVE:
+        model, field, quantity = Receipt, "net_kg", net_kg
+    else:
+        model, field, quantity = PumpOver, "elapsed_minutes", elapsed_minutes
+    if quantity is None:
+        if not model.objects.filter(work_order=order).exists():
+            raise HttpError(409, f"Record {field.replace('_', ' ')} before completing this order.")
+        return {}
+
+    try:
+        quantity = model._meta.get_field(field).clean(quantity, None)
+    except ValidationError as exc:
+        raise InputError(field, "Enter a valid positive measurement.") from exc
+    if quantity <= 0:
+        raise InputError(field, "The measurement must be positive.")
+    measure, created = model.objects.get_or_create(work_order=order, defaults={field: quantity})
+    if not created and getattr(measure, field) != quantity:
+        raise HttpError(409, "A different measurement is already recorded.")
+    if not created:
+        return {}
+    return {field: str(quantity) if field == "net_kg" else quantity}
+
+
+def complete_work_order(user, work_order_id, *, net_kg=None, elapsed_minutes=None):
     with transaction.atomic():
         order = _lock_in_progress_order(user, work_order_id)
-        if order.kind == WorkKind.SAMPLE and not order.lab_readings.exists():
-            raise HttpError(409, "Record a lab reading before completing this sample order.")
-        if order.kind == WorkKind.RECEIVE and not Receipt.objects.filter(work_order=order).exists():
-            raise HttpError(409, "Record the net kg before completing this receiving order.")
-        if order.kind == WorkKind.PUMP_OVER and not PumpOver.objects.filter(work_order=order).exists():
-            raise HttpError(409, "Record the elapsed minutes before completing this pump-over.")
-
+        changes = _completion_measurement(order, net_kg, elapsed_minutes)
         previous_status = order.status
         order.status = WorkOrder.Status.COMPLETED
         order.save(update_fields=["status"])
         AuditEvent.objects.create(
             actor=user, action=AuditEvent.Action.COMPLETED, work_order=order,
-            changes={"status": {"from": previous_status, "to": order.status}},
+            changes={**changes, "status": {"from": previous_status, "to": order.status}},
         )
     return order
 
@@ -107,11 +211,11 @@ def record_lab_reading(user, work_order_id, analyte, value):
             code = Analyte._meta.get_field("code").clean(code, None)
             registered = Analyte.objects.get(pk=code)
         except (ValidationError, Analyte.DoesNotExist) as exc:
-            raise HttpError(422, "Select a registered analyte.") from exc
+            raise InputError("analyte", "Select a registered analyte.") from exc
         try:
             value = LabReading._meta.get_field("value").clean(str(value), None)
         except ValidationError as exc:
-            raise HttpError(422, "Enter a finite decimal within the reading field's precision.") from exc
+            raise InputError("value", "Enter a finite decimal within the reading field's precision.") from exc
 
         reading = LabReading.objects.create(work_order=order, analyte=registered, value=value)
         AuditEvent.objects.create(

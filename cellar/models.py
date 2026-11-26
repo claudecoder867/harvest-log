@@ -163,6 +163,8 @@ class LabReading(models.Model):
 class AuditEvent(models.Model):
     class Action(models.TextChoices):
         PUBLISHED = "version_published", "Published a procedure version"
+        ISSUED = "work_order_issued", "Issued a work order"
+        STARTED = "work_order_started", "Started a work order"
         COMPLETED = "work_order_completed", "Completed a work order"
         LAB_RECORDED = "lab_reading_recorded", "Recorded a lab reading"
 
@@ -186,7 +188,8 @@ class AuditEvent(models.Model):
                 condition=(
                     models.Q(action="version_published", version__isnull=False,
                              work_order__isnull=True, lab_reading__isnull=True)
-                    | models.Q(action="work_order_completed", work_order__isnull=False,
+                    | models.Q(action__in=["work_order_issued", "work_order_started", "work_order_completed"],
+                               work_order__isnull=False,
                                version__isnull=True, lab_reading__isnull=True)
                     | models.Q(action="lab_reading_recorded", lab_reading__isnull=False,
                                version__isnull=True, work_order__isnull=True)
