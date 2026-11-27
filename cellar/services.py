@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Prefetch, Q
 from ninja.errors import HttpError
 
 from .models import (
@@ -88,6 +89,21 @@ def permitted_orders(user):
     if user.role == CellarRole.CellarHand:
         orders = orders.filter(assignee=user)
     return orders
+
+
+def orders_with_details(user):
+    readings = LabReading.objects.select_related("analyte", "creation_event").order_by("pk")
+    return (
+        permitted_orders(user)
+        .select_related("version__publication", "receipt", "pump_over")
+        .prefetch_related("version__steps", Prefetch("lab_readings", queryset=readings))
+    )
+
+
+def order_timeline(order):
+    return AuditEvent.objects.filter(
+        Q(work_order=order) | Q(lab_reading__work_order=order)
+    ).order_by("occurred_at", "pk")
 
 
 def issue_work_order(user, *, kind, lot_id, assignee_id, vessel_id=None, code=None):

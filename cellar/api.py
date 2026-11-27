@@ -3,7 +3,6 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from django.db.models import Prefetch, Q
 from ninja import Field, NinjaAPI, Schema, Status
 from ninja.errors import HttpError, ValidationError
 from ninja.parser import Parser
@@ -12,7 +11,7 @@ from pydantic import ConfigDict, StringConstraints
 
 from . import services
 from .models import (
-    MAX_INSTRUCTION_LENGTH, MAX_STEPS, AuditEvent, LabReading, Version, WorkKind, WorkOrder,
+    MAX_INSTRUCTION_LENGTH, MAX_STEPS, AuditEvent, Version, WorkKind, WorkOrder,
 )
 from .reports import season_totals
 
@@ -125,9 +124,7 @@ class OrderDetail(OrderOut):
 
     @staticmethod
     def resolve_timeline(order):
-        return AuditEvent.objects.filter(
-            Q(work_order=order) | Q(lab_reading__work_order=order)
-        ).order_by("occurred_at", "pk")
+        return services.order_timeline(order)
 
 
 class ErrorOut(Schema):
@@ -179,12 +176,8 @@ def list_work_orders(request):
 @api.get("/work-orders/{id}", response=responses(200, OrderDetail, 404, 422))
 def get_work_order(request, id: RecordId):
     """Open a permitted order with its pinned instructions, measurements and timeline."""
-    readings = LabReading.objects.select_related("analyte", "creation_event").order_by("pk")
-    orders = services.permitted_orders(request.user).select_related(
-        "version__publication", "receipt", "pump_over",
-    ).prefetch_related("version__steps", Prefetch("lab_readings", queryset=readings))
     try:
-        return orders.get(pk=id)
+        return services.orders_with_details(request.user).get(pk=id)
     except WorkOrder.DoesNotExist as exc:
         raise HttpError(404, "Work order not found.") from exc
 

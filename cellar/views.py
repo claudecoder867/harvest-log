@@ -3,13 +3,13 @@ from django.contrib.auth.views import LoginView
 from django.core.exceptions import PermissionDenied
 from django.db.models import Case, When
 from django.http import Http404
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_safe
 
-from .models import CellarRole, Lot, Season, User, Version, Vessel, WorkKind, WorkOrder
+from .models import Analyte, CellarRole, Lot, Season, User, Version, Vessel, WorkKind, WorkOrder
 from .reports import season_totals
-from .services import permitted_orders
+from .services import order_timeline, orders_with_details, permitted_orders
 
 
 class SignInView(LoginView):
@@ -44,6 +44,21 @@ def home(request):
     if request.user.role == CellarRole.CellarManager:
         return redirect("manager")
     return _render_work_queue(request)
+
+
+@login_required
+@require_safe
+def work_order_detail(request, pk):
+    order = get_object_or_404(
+        orders_with_details(request.user).select_related("lot", "vessel", "assignee"), pk=pk,
+    )
+    context = {
+        "order": order,
+        "timeline": order_timeline(order).select_related("actor", "lab_reading__analyte"),
+    }
+    if order.kind == WorkKind.SAMPLE and order.status == WorkOrder.Status.IN_PROGRESS:
+        context["analytes"] = Analyte.objects.order_by("name")
+    return render(request, "cellar/work_order_detail.html", context)
 
 
 @login_required

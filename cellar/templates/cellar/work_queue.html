@@ -64,9 +64,9 @@
         {% for order in work_orders %}
           <tr>
             <td>
+              <a href="{% url 'work_order_detail' order.pk %}" aria-label="Open work order {{ order.code }}">{% for char in order.code %}{{ char }}{% if forloop.counter|divisibleby:8 %}<wbr>{% endif %}{% endfor %}</a>
               <details{% if user.role == "hand" and forloop.first and order.status != "completed" %} open{% endif %}>
-                <summary>#{{ order.pk }} · {{ order.version.procedure.get_kind_display }}</summary>
-                <p>{% for char in order.code %}{{ char }}{% if forloop.counter|divisibleby:8 %}<wbr>{% endif %}{% endfor %}</p>
+                <summary>{{ order.version.procedure.get_kind_display }}</summary>
                 <strong>Instructions <span class="ae-badge">Revision {{ order.version.revision }}</span></strong>
                 <ol>{% for step in order.version.steps.all %}<li>{{ step.instruction }}</li>{% endfor %}</ol>
               </details>

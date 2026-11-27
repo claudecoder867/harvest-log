@@ -2,16 +2,16 @@
 
 Harvest Log tracks fruit receipts, tank pump-overs, and lab sampling. A cellar hand can open an assigned order and see exactly which instructions to follow. A manager can change the procedure for the next order while preserving the instructions and measurements on every order already issued.
 
-The application uses Django 5.2, Django Ninja, PostgreSQL 16 with psycopg 3, and server-rendered HTML. Start with the [local setup](#run-locally-on-macos), then try the [two-order walkthrough](#see-two-procedure-versions-side-by-side).
+The application uses Django 5.2, Django Ninja, PostgreSQL 16 with psycopg 3, and server-rendered HTML. Open the [hosted app](https://harvest-log-5hld.onrender.com/accounts/login/) as `demo_hand` or `demo_manager` with the password for that role. Supply both reviewer passwords privately. The [commit history](https://github.com/claudecoder867/harvest-log/commits/main/) follows the work from authentication through reporting. For development, start with the [local setup](#run-locally-on-macos), then try the [two-order walkthrough](#see-two-procedure-versions-side-by-side).
 
 ## Run locally on macOS
 
 ### 1. Clone the repository and start PostgreSQL
 
-Use a Mac with Git and Homebrew installed. Replace `<repository-url>` with the clone URL supplied for review. If you received a Git bundle, use its local path in the same command.
+Use a Mac with Git and Homebrew installed. If you received a Git bundle, use its local path as the clone source.
 
 ```bash
-git clone '<repository-url>' Harvest_Log
+git clone https://github.com/claudecoder867/harvest-log.git Harvest_Log
 cd Harvest_Log
 brew install postgresql@16 python@3.13
 bash init_mac_postgres.sh
@@ -75,7 +75,7 @@ Open the [local sign-in page](http://127.0.0.1:8000/accounts/login/) as `demo_ma
 | Read procedure history and publish a revision | — | All three procedures |
 | View the Season Report and winery-wide audit events | — | All seasons and events |
 
-An order moves from **Not started** to **In progress** to **Completed**. Receiving requires a positive net weight in kg, a pump-over requires positive elapsed minutes, and a sample needs at least one lab reading. The queue displays orders and steps. The API also exposes transitions, lab entry, and the per-order timeline. Routes and payloads are in the [checked-in OpenAPI schema](openapi.json) and the [local interactive API docs](http://127.0.0.1:8000/api/v1/docs).
+An order moves from **Not started** to **In progress** to **Completed**. Receiving requires a positive net weight in kg, a pump-over requires positive elapsed minutes, and a sample needs at least one lab reading. Open an order by its code in the queue. The order page displays its saved revision and instructions, the action available in the current state, the recorded measurements, and the history with each actor and time. The page submits to the same API that enforces permissions and transitions. Routes and payloads are in the [checked-in OpenAPI schema](openapi.json) and the [local interactive API docs](http://127.0.0.1:8000/api/v1/docs).
 
 ### See two procedure versions side by side
 
@@ -83,7 +83,7 @@ An order moves from **Not started** to **In progress** to **Completed**. Receivi
 2. Open the [sampling procedure editor](http://127.0.0.1:8000/manager/procedures/?kind=sample). Add “Write the tank ID on the sample label.” Publish and confirm revision 2.
 3. Return to the queue and issue a **Take a lab sample** order for lot **DEMO-PN-2026**, tank **T-04**, assigned to **demo_hand**. Expand both orders. The new one includes the label instruction under revision 2. HL-009 still shows its original two steps under revision 1.
 
-The [2026 Season Report](http://127.0.0.1:8000/manager/reports/seasons/2026/) gives a second check. On a fresh seed it shows **12 orders, 8 completed, 4 readings, and 6.40 t received**. Issuing the new sample raises only the order count. The automated walkthrough then records a reading on HL-009 and completes it as the hand. The resulting totals are **13 orders, 9 completed, 5 readings, and 6.40 t**, with HL-009 still on revision 1. See the [walkthrough test](cellar/test_reports.py).
+The [2026 Season Report](http://127.0.0.1:8000/manager/reports/seasons/2026/) gives a second check. On a fresh seed it shows **12 orders, 8 completed, 4 readings, and 6.40 t received**. Issuing the new sample raises only the order count. To finish the walkthrough, sign in as `demo_hand`, open **HL-009** by its code, record **21.8 °Brix** under **Soluble solids**, then select **Complete order**. Sign back in as the manager and revisit the 2026 report. The resulting totals are **13 orders, 9 completed, 5 readings, and 6.40 t**, with HL-009 still on revision 1. See the [walkthrough test](cellar/test_reports.py).
 
 ## Architecture decisions
 

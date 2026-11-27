@@ -1,0 +1,125 @@
+{% extends "cellar/base.html" %}
+{% block title %}{{ order.code }} · Harvest Log{% endblock %}
+{% block legacy_styles %}{% endblock %}
+{% block screen %}
+  <nav aria-label="Work orders"><a href="{% url 'home' %}">Work queue</a></nav>
+  <h1>{{ order.code }}</h1>
+  <p>{{ order.version.procedure.get_kind_display }} <span class="ae-badge">{{ order.get_status_display }}</span></p>
+  <dl>
+    <dt>Lot</dt><dd>{{ order.lot.code }}</dd>
+    {% if order.vessel_id %}<dt>Tank</dt><dd>{{ order.vessel.code }}</dd>{% endif %}
+    <dt>Assigned to</dt><dd>{{ order.assignee.get_full_name|default:order.assignee.get_username }}</dd>
+  </dl>
+  <section aria-labelledby="instructions">
+    <h2 id="instructions">Instructions <span class="ae-badge">Revision {{ order.version.revision }}</span></h2>
+    <ol>{% for step in order.version.steps.all %}<li>{{ step.instruction }}</li>{% endfor %}</ol>
+  </section>
+  {% with readings=order.lab_readings.all %}
+    {% if readings or order.receipt or order.pump_over %}
+      <section aria-labelledby="results">
+        <h2 id="results">Recorded measurements</h2>
+        {% if order.receipt %}<p>Net fruit weight: {{ order.receipt.net_kg|floatformat:"3" }} kg</p>{% endif %}
+        {% if order.pump_over %}<p>Pump-over duration: {{ order.pump_over.elapsed_minutes }} minutes</p>{% endif %}
+        {% if readings %}
+          <ul>{% for reading in readings %}
+            <li>{{ reading.analyte.name }}: {{ reading.value|floatformat:"4" }}{% if reading.analyte.unit %} {{ reading.analyte.unit }}{% endif %}</li>
+          {% endfor %}</ul>
+        {% endif %}
+      </section>
+    {% endif %}
+    {% if order.status != "completed" %}
+      <section aria-labelledby="record-work" id="order-actions">
+        <h2 id="record-work">Record work</h2>
+        <noscript><p>Enable JavaScript to record work on this order.</p></noscript>
+        {% if order.status == "in_progress" and order.kind == "sample" %}
+          {% if readings %}<details><summary>Add another reading</summary>{% endif %}
+          <form method="post" action="{% url 'api-1.0.0:record_lab_result' id=order.pk %}">
+            <fieldset disabled>
+              <legend>Lab reading</legend>
+              <div class="ae-field">
+                <label for="analyte">Analyte</label>
+                <select id="analyte" name="analyte" required>
+                  <option value="">Select an analyte</option>
+                  {% for analyte in analytes %}<option value="{{ analyte.pk }}">{{ analyte.name }}{% if analyte.unit %} ({{ analyte.unit }}){% endif %}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="ae-field">
+                <label for="reading-value">Measured value</label>
+                <input id="reading-value" name="value" type="number" inputmode="decimal" step="0.0001" required>
+              </div>
+              <button class="ae-btn" type="submit">Add reading</button>
+            </fieldset>
+          </form>
+          {% if readings %}</details>{% else %}<p>Record a reading to complete this sample.</p>{% endif %}
+        {% endif %}
+        {% if order.status == "not_started" or order.kind != "sample" or readings %}
+          <form method="post" action="{% url 'api-1.0.0:transition_work_order' id=order.pk %}">
+            <fieldset disabled>
+              {% if order.status == "not_started" %}
+                <legend>Start work</legend>
+                <input name="action" type="hidden" value="start">
+                <button class="ae-btn" type="submit">Start order</button>
+              {% else %}
+                <legend>Complete work</legend>
+                <input name="action" type="hidden" value="complete">
+                {% if order.kind == "receive" and not order.receipt %}
+                  <div class="ae-field"><label for="net-kg">Net fruit weight (kg)</label><input type="number" id="net-kg" name="net_kg" inputmode="decimal" min="0.001" max="999999999.999" step="0.001" required></div>
+                {% elif order.kind == "pump_over" and not order.pump_over %}
+                  <div class="ae-field"><label for="elapsed">Elapsed time (minutes)</label><input type="number" id="elapsed" name="elapsed_minutes" inputmode="numeric" min="1" max="2147483647" step="1" required></div>
+                {% endif %}
+                <button class="ae-btn" type="submit">Complete order</button>
+              {% endif %}
+            </fieldset>
+          </form>
+        {% endif %}
+        <p role="alert" id="order-error" tabindex="-1" hidden></p>
+        <a id="refresh-order" href="{% url 'work_order_detail' order.pk %}" hidden>Refresh this order</a>
+      </section>
+    {% endif %}
+  {% endwith %}
+  <section aria-labelledby="history">
+    <h2 id="history">Order history</h2>
+    <ol>{% for event in timeline %}
+      <li><strong>{{ event.get_action_display }}</strong> · {{ event.actor.get_full_name|default:event.actor.get_username }}
+        · <time datetime="{{ event.occurred_at|date:'c' }}">{{ event.occurred_at|date:"M j, Y, H:i T" }}</time>
+        {% if event.lab_reading_id %} · {{ event.lab_reading.analyte.name }} {{ event.lab_reading.value|floatformat:"4" }} {{ event.lab_reading.analyte.unit }}{% endif %}
+      </li>
+    {% empty %}<li>No events recorded.</li>{% endfor %}</ol>
+  </section>
+{% endblock %}
+{% block scripts %}
+  <script>
+    (() => {
+      const section = document.getElementById("order-actions");
+      if (!section) return;
+      const fields = section.querySelectorAll("fieldset");
+      const error = document.getElementById("order-error");
+      const refresh = document.getElementById("refresh-order");
+      function lock(disabled) {
+        fields.forEach(fieldset => { fieldset.disabled = disabled; });
+      }
+      lock(false);
+      section.addEventListener("submit", async event => {
+        event.preventDefault();
+        const form = event.target;
+        if (form.querySelector("fieldset").disabled) return;
+        const data = Object.fromEntries(new FormData(form));
+        if ("elapsed_minutes" in data) data.elapsed_minutes = Number(data.elapsed_minutes);
+        lock(true);
+        error.hidden = true;
+        try {
+          await postJSON(form.action, data);
+          window.location.reload();
+        } catch (problem) {
+          const correctable = problem.status === 422;
+          lock(!correctable);
+          refresh.hidden = correctable;
+          error.textContent = problem.status ? problem.message :
+            "The save could not be confirmed. Refresh this order and check its history before trying again.";
+          error.hidden = false;
+          (correctable && form.elements.namedItem(problem.field) || error).focus();
+        }
+      });
+    })();
+  </script>
+{% endblock %}
