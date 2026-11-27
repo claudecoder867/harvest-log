@@ -1,8 +1,6 @@
 {% extends "cellar/base.html" %}
 {% block title %}{{ report.year }} season report · Harvest Log{% endblock %}
-{% block legacy_styles %}{% endblock %}
 {% block screen %}
-  <a href="{% url 'manager' %}">Work queue</a>
   <h1>{{ report.year }} season report</h1>
   {% if years %}
     <nav aria-label="Harvest seasons">
@@ -11,13 +9,13 @@
       {% endfor %}
     </nav>
   {% endif %}
-  <dl>
-    <dt>Net fruit received</dt><dd>{{ report.net_tonnes_received|floatformat:"2" }} t</dd>
-    <dt>Completed work orders</dt><dd>{{ report.completed_orders }} of {{ report.total_orders }}</dd>
-    <dt>Recorded lab readings</dt><dd>{{ report.lab_readings }}</dd>
+  <dl id="metrics">
+    <div><dt>Net fruit received</dt><dd>{{ report.net_tonnes_received|floatformat:"2" }} t</dd></div>
+    <div><dt>Completed work orders</dt><dd>{{ report.completed_orders }} of {{ report.total_orders }}</dd></div>
+    <div><dt>Recorded lab readings</dt><dd>{{ report.lab_readings }}</dd></div>
   </dl>
   {% if not report.total_orders %}<p>No work orders for this season.</p>{% endif %}
-  <table class="ae-table">
+  <div data-table-scroll tabindex="0" role="region" aria-label="Season breakdown"><table class="ae-table">
     <caption>{{ report.year }} work orders by type and status</caption>
     <thead>
       <tr>
@@ -39,5 +37,5 @@
         <td>{{ report.in_progress_orders }}</td><td>{{ report.completed_orders }}</td><td>{{ report.total_orders }}</td>
       </tr>
     </tfoot>
-  </table>
+  </table></div>
 {% endblock %}

@@ -1,6 +1,5 @@
 {% extends "cellar/base.html" %}
 {% block title %}Procedure editor · Harvest Log{% endblock %}
-{% block legacy_styles %}{% endblock %}
 {% block screen %}
   {% comment %}
     Manager-only view. Resolve the GET parameter kind to a WorkKind (default receive).
@@ -9,7 +8,6 @@
   {% endcomment %}
   {% if user.role == "manager" %}
     <h1>Procedure editor</h1>
-    <p><a href="{% url 'manager' %}">Work queue</a></p>
     <form method="get">
       <div class="ae-field">
         <label for="choose-kind">Procedure</label>

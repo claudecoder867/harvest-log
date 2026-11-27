@@ -5,28 +5,38 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Harvest Log{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'cellar/brand/1.71.0/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'cellar/brand/1.71.1/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'cellar/brand/1.71.0/css/components.css' %}">
-  {% block legacy_styles %}<link rel="stylesheet" href="{% static 'cellar/site.css' %}">{% endblock %}
+  <link rel="stylesheet" href="{% static 'cellar/brand/1.71.1/table.css' %}">
+  <link rel="stylesheet" href="{% static 'cellar/site.css' %}">
 </head>
-<body>
-  <main id="main">
-    <header>
-      <img src="{% static 'cellar/brand/1.71.0/logo.svg' %}" alt="Alert Enterprise" width="156">
-      <p>Harvest Log</p>
-    </header>
-    {% block content %}
-      {% if user.is_authenticated %}
-        <p>{{ user.get_username }} <span class="ae-badge">{{ user.get_role_display }}</span></p>
-        {% block screen %}{% endblock %}
-        <form action="{% url 'logout' %}" method="post">
-          {% csrf_token %}
-          <button type="submit" class="ae-btn">Sign out</button>
-        </form>
-      {% else %}
-        <a href="{% url 'login' %}">Sign in to Harvest Log</a>
-      {% endif %}
-    {% endblock %}
+<body data-screen="{% if user.is_authenticated %}workspace{% else %}login{% endif %}">
+  <a id="skip" href="#main">Skip to content</a>
+  <header id="masthead">
+    <div>
+      <img src="{% static 'cellar/brand/1.71.0/logo.svg' %}" alt="Alert Enterprise" width="145">
+      <strong>Harvest Log</strong>
+    </div>
+    {% if user.is_authenticated %}
+      <div id="account">
+        <span>{{ user.get_username }} <span class="ae-badge">{{ user.get_role_display }}</span></span>
+        <form action="{% url 'logout' %}" method="post">{% csrf_token %}<button type="submit" class="ae-btn">Sign out</button></form>
+      </div>
+    {% endif %}
+  </header>
+  {% if user.is_authenticated %}
+    {% with page=request.resolver_match.url_name %}
+      <nav id="primary" aria-label="Main navigation">
+        <a href="{% url 'home' %}"{% if page == 'home' or page == 'manager' %} aria-current="page"{% elif page == 'work_order_detail' %} aria-current="location"{% endif %}><img alt="" width="22" height="22" src="{% static 'cellar/brand/1.71.1/icon-checklist-tasks.svg' %}">Work queue</a>
+        {% if user.role == 'manager' %}
+          <a href="{% url 'procedure_editor' %}"{% if page == 'procedure_editor' %} aria-current="page"{% endif %}><img alt="" width="22" height="22" src="{% static 'cellar/brand/1.71.1/icon-clipboard-document.svg' %}">Procedure editor</a>
+          <a href="{% url 'season_report_latest' %}"{% if page == 'season_report' or page == 'season_report_latest' %} aria-current="page"{% endif %}><img alt="" width="22" height="22" src="{% static 'cellar/brand/1.71.1/icon-report.svg' %}">Season report</a>
+        {% endif %}
+      </nav>
+    {% endwith %}
+  {% endif %}
+  <main id="main" tabindex="-1">
+    {% block content %}{% block screen %}{% endblock %}{% endblock %}
   </main>
   {% if user.is_authenticated %}
     <script>

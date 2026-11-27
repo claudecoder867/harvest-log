@@ -1,10 +1,8 @@
 {% extends "cellar/base.html" %}
 {% block title %}{{ order.code }} · Harvest Log{% endblock %}
-{% block legacy_styles %}{% endblock %}
 {% block screen %}
-  <nav aria-label="Work orders"><a href="{% url 'home' %}">Work queue</a></nav>
   <h1>{{ order.code }}</h1>
-  <p>{{ order.version.procedure.get_kind_display }} <span class="ae-badge">{{ order.get_status_display }}</span></p>
+  <p>{{ order.version.procedure.get_kind_display }} <span class="ae-badge" data-status="{{ order.status }}">{{ order.get_status_display }}</span></p>
   <dl>
     <dt>Lot</dt><dd>{{ order.lot.code }}</dd>
     {% if order.vessel_id %}<dt>Tank</dt><dd>{{ order.vessel.code }}</dd>{% endif %}

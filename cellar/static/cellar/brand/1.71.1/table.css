@@ -1,0 +1,6 @@
+/* Published rules from Alert Enterprise 1.71.1, css/components.css. */
+.ae-table { width: 100%; border-collapse: separate; border-spacing: 0; font: var(--ae-type-body-sm); }
+.ae-table th { text-align: left; font: 400 var(--ae-type-caption-size)/1.2 var(--ae-font-text); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ae-text-2); padding: var(--ae-space-2) var(--ae-space-4); border-bottom: 1px solid var(--ae-line-strong); background: var(--ae-bg-muted); white-space: nowrap; }
+.ae-table td { padding: var(--ae-space-3) var(--ae-space-4); border-bottom: 1px solid var(--ae-line); vertical-align: middle; }
+.ae-table tbody tr { transition: background-color var(--ae-duration-fast) var(--ae-ease-standard); }
+.ae-table tbody tr:hover { background: var(--ae-bg-muted); }

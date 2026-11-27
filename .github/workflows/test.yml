@@ -38,3 +38,8 @@ jobs:
           python manage.py seed_demo
           python manage.py seed_demo
           python manage.py test --verbosity 2
+      - name: Rehearse manager and hand workflows in Chromium
+        run: |
+          python -m pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+          python manage.py test qa.browser --verbosity 2

@@ -97,16 +97,16 @@ The [2026 Season Report](http://127.0.0.1:8000/manager/reports/seasons/2026/) gi
 
 ## Brand application
 
-The execution plan specifies **Alert Enterprise v1.70.0**. The repository ships tokens and a component stylesheet labeled **v1.71.0**, which the base template loads from Django static files alongside the logo and Aeonik fonts. The light palette maps Purple `#5F51D5` to primary actions and Ink `#262626` to text, with Coral `#FF5233` available as an accent. The sign-in stylesheet uses semantic tokens for focus and validation errors. No external CSS framework or inline styles are required.
+All screens use the published Alert Enterprise wordmark, locally served Aeonik Regular and Bold, Purple primary actions, and Ink body text. The app uses v1.71.1 tokens, three original SVG navigation icons, and the table rules from the publisher’s developer pack. It retains the verified v1.71.0 font, button, field and badge subset. Asset paths preserve the version of each source. [Brand guide](https://brand.alertenterprise.app/guidelines/) · [Application stylesheet](cellar/static/cellar/site.css)
 
-| Brand class | HTML in Harvest Log |
+| Class | Use in the app |
 | --- | --- |
-| `.ae-btn` | A native `<button>` signs in or publishes a revision. The queue also uses it on the `<summary>` that opens the issue form. |
-| `.ae-field` | A wrapper groups a visible `<label>` with its `<input>`, `<select>`, or `<textarea>`. |
-| `.ae-table` | Queue and report tables use `<caption>` and scoped `<th>` cells. The bundled component subset has no `.ae-table` rule, so these tables use native table styling. |
-| `.ae-badge` | A `<span>` displays role, status, or revision as text, so the value remains readable without color. |
+| `.ae-btn` | Issue, save a measurement, finish an order or confirm publication. Secondary buttons use the outline palette. |
+| `.ae-field` | Visible labels, units, inputs and inline validation. |
+| `.ae-table` | Captioned queue and season breakdown. On a phone, queue rows stack and the report table scrolls within its own region. |
+| `.ae-badge` | Text identifies role, order state and pinned revision. |
 
-The sign-in page adds a small token-based [page stylesheet](cellar/static/cellar/site.css). The queue, editor, and report load the [tokens](cellar/static/cellar/brand/1.71.0/tokens.css) and [component subset](cellar/static/cellar/brand/1.71.0/css/components.css) directly through the [base template](cellar/templates/cellar/base.html).
+A shared navigation bar gives managers access to the queue, procedure editor and season report. A hand sees their queue. Both use the same order detail screen and audit history. Keyboard users can skip navigation, focus errors and cancel publication.
 
 ## How ChatGPT was used
 
@@ -121,7 +121,7 @@ The **Harvest Test** ChatGPT Project used Matt Bennett’s exercise brief and th
 
 AI accelerated the repetitive work of drafting migrations, request schemas, forms, and test setup. Two prompt constraints shaped the implementation. For the Season Report, the prompt prohibited aggregating across work orders, receipts, and readings in one joined row set. The regression test checks multiple readings on a sample, an unfinished receipt, and a prior-season receipt. For browser writes, the project required Django session authentication and CSRF enforcement. The shared `postJSON()` wrapper reads the current `csrftoken` cookie, sends it as `X-CSRFToken`, and includes same-origin credentials. Standard POST forms use `{% csrf_token %}`. The API tests enable CSRF checks and verify that an authenticated manager’s POST without the header receives HTTP 403. [Report tests](cellar/test_reports.py) · [API tests](cellar/test_api.py)
 
-The first brand search failed to locate the kit. As the execution plan records, inspecting the published guide in a browser established the v1.70.0 design reference. The stylesheet headers identify the version actually shipped here.
+The first brand search failed to locate the kit. As the execution plan records, inspecting the published guide in a browser established the v1.70.0 design reference. A later review found that the signed-in templates omitted the application stylesheet and the bundled subset lacked table rules. The release added the published table rules and icons, then added browser checks for loaded fonts, both roles and phone widths.
 
 ## Run the tests
 
@@ -134,9 +134,11 @@ python manage.py test
 
 The bootstrap grants `harvest_app` permission to create the temporary test database. The tests exercise PostgreSQL row locks and triggers, historical step text, role and CSRF denials, audit rollback, and seed idempotency. To run just the two-order and Season Report checks, use `python manage.py test cellar.test_reports`.
 
+The GitHub Actions workflow also runs a Chromium walkthrough on an isolated Django test database. It verifies the served OpenAPI document against the checked-in schema, exercises the revision-1/revision-2 demonstration, and checks the 2025 and 2026 totals. Run it locally after installing `playwright==1.56.0` and Chromium with `python -m playwright install chromium`, then run `python manage.py test qa.browser`. [Continuous integration](.github/workflows/test.yml)
+
 ## Deploy on Render
 
-Use a Python web service and a persistent PostgreSQL 16 database. Set `PYTHON_VERSION=3.13.18`, supply the database’s internal URL as `DATABASE_URL`, and store a persistent `DJANGO_SECRET_KEY` in the service environment. Set `DJANGO_DEBUG=0`. For a custom domain, set `DJANGO_ALLOWED_HOSTS` to its hostname and `DJANGO_CSRF_TRUSTED_ORIGINS` to its full HTTPS origin. The settings also recognize `RENDER_EXTERNAL_HOSTNAME`.
+Use a Python web service and a persistent PostgreSQL 16 database. Set `PYTHON_VERSION=3.13.18`, supply the database’s internal URL as `DATABASE_URL`, and store a persistent `DJANGO_SECRET_KEY` in the service environment. Set `DJANGO_DEBUG=0`. For a custom domain, set `DJANGO_ALLOWED_HOSTS` to its bare hostname (for this demo, `harvest-log-5hld.onrender.com`) and `DJANGO_CSRF_TRUSTED_ORIGINS` to its full HTTPS origin. The settings also recognize `RENDER_EXTERNAL_HOSTNAME`.
 
 | Service setting | Command |
 | --- | --- |
