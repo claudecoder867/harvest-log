@@ -73,13 +73,18 @@ class ReviewerWalkthrough(LiveServerTestCase):
             manager.get_by_label("Lot", exact=True).select_option(label="DEMO-PN-2026 · 2026")
             manager.get_by_label("Tank (optional)").select_option(label="T-04")
             manager.get_by_label("Assignee", exact=True).select_option(label="demo_hand")
+            order_links = hand.locator('a[aria-label^="Open work order "]')
+            link_names = "links => links.map(link => link.getAttribute('aria-label'))"
+            original_orders = set(order_links.evaluate_all(link_names))
             with manager.expect_response(lambda r: r.url.endswith("/api/v1/work-orders") and r.request.method == "POST") as issued:
                 manager.locator("#issue-form").get_by_role("button", name="Issue work order", exact=True).click()
             self.assertEqual(issued.value.status, 201)
-            new_code = issued.value.json()["code"]
 
             hand.reload()
-            hand.get_by_role("link", name="Open work order " + new_code).click()
+            expect(order_links).to_have_count(len(original_orders) + 1)
+            new_orders = set(order_links.evaluate_all(link_names)) - original_orders
+            self.assertEqual(len(new_orders), 1)
+            hand.get_by_role("link", name=new_orders.pop(), exact=True).click()
             expect(hand.get_by_text("Revision 2", exact=True)).to_be_visible()
             expect(hand.get_by_text(instruction)).to_be_visible()
             hand.get_by_role("link", name="Work queue").click()
