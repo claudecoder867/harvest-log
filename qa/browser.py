@@ -103,6 +103,19 @@ class ReviewerWalkthrough(LiveServerTestCase):
             expect(manager.locator("#metrics dd")).to_have_text(["6.40 t", "9 of 13", "5"])
             manager.get_by_role("link", name="2025", exact=True).click()
             expect(manager.locator("#metrics dd")).to_have_text(["0.90 t", "1 of 1", "0"])
+            for code, field, value in [
+                ("HL-004", "Net fruit weight (kg)", "150"),
+                ("HL-008", "Elapsed time (minutes)", "18"),
+            ]:
+                hand.get_by_role("link", name="Work queue").click()
+                hand.get_by_role("link", name="Open work order " + code).click()
+                if code == "HL-004":
+                    hand.get_by_role("button", name="Start order").click()
+                hand.get_by_label(field).fill(value)
+                hand.get_by_role("button", name="Complete order").click()
+                expect(hand.get_by_text("Completed a work order", exact=True)).to_be_visible()
+            manager.get_by_role("link", name="2026", exact=True).click()
+            expect(manager.locator("#metrics dd")).to_have_text(["6.55 t", "11 of 13", "5"])
             for path in ["/manager/", "/manager/procedures/", "/manager/reports/seasons/2026/"]:
                 manager.set_viewport_size({"width": 320, "height": 720})
                 manager.goto(self.live_server_url + path)

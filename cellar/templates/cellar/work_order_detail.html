@@ -106,7 +106,7 @@
         lock(true);
         error.hidden = true;
         try {
-          await postJSON(form.action, data);
+          await postJSON(form.getAttribute("action"), data);
           window.location.reload();
         } catch (problem) {
           const correctable = problem.status === 422;
