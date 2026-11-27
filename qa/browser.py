@@ -5,14 +5,13 @@ import secrets
 from pathlib import Path
 from unittest.mock import patch
 
-from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.core.management import call_command
-from django.test import override_settings
+from django.test import LiveServerTestCase, override_settings
 from playwright.sync_api import expect, sync_playwright
 
 
 @override_settings(SECURE_SSL_REDIRECT=False, SESSION_COOKIE_SECURE=False, CSRF_COOKIE_SECURE=False)
-class ReviewerWalkthrough(StaticLiveServerTestCase):
+class ReviewerWalkthrough(LiveServerTestCase):
     def sign_in(self, page, username, password):
         page.goto(self.live_server_url + "/accounts/login/")
         page.keyboard.press("Tab")

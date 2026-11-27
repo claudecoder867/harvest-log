@@ -134,7 +134,7 @@ python manage.py test
 
 The bootstrap grants `harvest_app` permission to create the temporary test database. The tests exercise PostgreSQL row locks and triggers, historical step text, role and CSRF denials, audit rollback, and seed idempotency. To run just the two-order and Season Report checks, use `python manage.py test cellar.test_reports`.
 
-The GitHub Actions workflow also runs a Chromium walkthrough on an isolated Django test database. It verifies the served OpenAPI document against the checked-in schema, exercises the revision-1/revision-2 demonstration, and checks the 2025 and 2026 totals. Run it locally after installing `playwright==1.56.0` and Chromium with `python -m playwright install chromium`, then run `python manage.py test qa.browser`. [Continuous integration](.github/workflows/test.yml)
+The GitHub Actions workflow also runs a Chromium walkthrough on an isolated Django test database. It verifies the served OpenAPI document against the checked-in schema, exercises the revision-1/revision-2 demonstration, and checks the 2025 and 2026 totals. Run it locally after installing `playwright==1.56.0` and Chromium with `python -m playwright install chromium`, run `python manage.py collectstatic --noinput`, then run `python manage.py test qa.browser`. [Continuous integration](.github/workflows/test.yml)
 
 ## Deploy on Render
 
